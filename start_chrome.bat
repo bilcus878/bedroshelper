@@ -4,24 +4,22 @@ echo ============================================================
 echo  Step 1 of 2: Launch Chrome with remote debugging
 echo ============================================================
 echo.
-echo IMPORTANT: Close ALL Chrome windows before continuing.
-echo If Chrome is already open it will ignore the debug flag.
-echo.
-pause
 
-echo Checking if port 9222 is already in use...
+REM Check if port is already open (previous debug session still running)
 netstat -an | find "9222" | find "LISTENING" >nul 2>&1
 if %errorlevel% == 0 (
-    echo Port 9222 is already open - Chrome debug is already running!
+    echo Port 9222 is already open - debug Chrome is running.
     echo You can go ahead and run start.bat
     pause
     exit /b 0
 )
 
-echo Starting Chrome with --remote-debugging-port=9222 ...
-echo.
+echo Killing any existing Chrome processes...
+taskkill /F /IM chrome.exe >nul 2>&1
+timeout /t 2 /nobreak >nul
 
-REM Try common Chrome install locations
+echo Starting Chrome with --remote-debugging-port=9222 ...
+
 if exist "%LOCALAPPDATA%\Google\Chrome\Application\chrome.exe" (
     start "" "%LOCALAPPDATA%\Google\Chrome\Application\chrome.exe" --remote-debugging-port=9222
     goto wait
@@ -35,30 +33,27 @@ if exist "%PROGRAMFILES(X86)%\Google\Chrome\Application\chrome.exe" (
     goto wait
 )
 
-echo ERROR: Chrome not found in default locations.
-echo Edit start_chrome.bat and set the correct path to chrome.exe
+echo ERROR: Chrome not found. Edit start_chrome.bat with the correct path.
 pause
 exit /b 1
 
 :wait
-echo Chrome is starting...
-timeout /t 3 /nobreak >nul
+echo Waiting for Chrome to start...
+timeout /t 4 /nobreak >nul
 
-REM Verify the port opened
 netstat -an | find "9222" | find "LISTENING" >nul 2>&1
 if %errorlevel% == 0 (
     echo.
-    echo SUCCESS - Chrome debug port 9222 is open.
+    echo SUCCESS - Port 9222 is open.
     echo.
     echo Now:
-    echo   1. Log into stargate-game.cz in that Chrome window
+    echo   1. Log into stargate-game.cz
     echo   2. Navigate to the sector map
-    echo   3. Run start.bat to start the bot
+    echo   3. Run start.bat
 ) else (
     echo.
-    echo WARNING: Port 9222 did not open. Chrome may have attached to
-    echo an existing session without the debug flag.
-    echo Close ALL Chrome windows and try again.
+    echo FAILED - Port 9222 still not open.
+    echo Chrome path might be wrong. Check Task Manager to find chrome.exe location.
 )
 echo.
 pause
