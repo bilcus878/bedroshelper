@@ -12,11 +12,9 @@ class BrowserSession:
 
     async def attach(self, cdp_url: str = CDP_URL) -> bool:
         """
-        Attach to an existing Chrome instance that was launched with:
+        Attach to an existing Chrome instance launched with:
             chrome.exe --remote-debugging-port=9222
-
-        Finds whichever tab is currently on the game and uses that.
-        If multiple game tabs are open, picks the first one.
+        Finds whichever tab is on the game and uses that.
         """
         self._playwright = await async_playwright().start()
         try:
@@ -28,7 +26,6 @@ class BrowserSession:
             )
             return False
 
-        # Search all contexts and tabs for a game page
         for context in self._browser.contexts:
             for page in context.pages:
                 if GAME_HOST in page.url:
@@ -37,14 +34,13 @@ class BrowserSession:
                     logger.info(f"Attached to game tab: {page.url}")
                     return True
 
-        # No game tab found — warn and use whatever tab is active
         contexts = self._browser.contexts
         if contexts and contexts[0].pages:
             self.page = contexts[0].pages[0]
             self._context = contexts[0]
             logger.warning(
-                f"No {GAME_HOST} tab found. Using active tab: {self.page.url}\n"
-                f"Navigate to the game manually and restart the bot."
+                f"No {GAME_HOST} tab found. Active tab: {self.page.url}\n"
+                "Navigate to the game and restart the bot."
             )
             return False
 
@@ -52,28 +48,33 @@ class BrowserSession:
         return False
 
     def current_url(self) -> str:
-        if self.page:
-            return self.page.url
-        return ""
+        return self.page.url if self.page else ""
 
     def is_on_sector_map(self) -> bool:
-        return "mapa.php" in self.current_url()
+        """Main galaxy map — no id_sektor param."""
+        url = self.current_url()
+        return "mapa.php" in url and "id_sektor" not in url
+
+    def is_on_sector_detail(self) -> bool:
+        """Single-sector detail page after clicking a sector."""
+        url = self.current_url()
+        return "mapa.php" in url and "id_sektor" in url
 
     def is_on_war_page(self) -> bool:
-        # CALIBRATE: add the war page URL fragment when known
-        return "valka.php" in self.current_url() or "utok.php" in self.current_url()
+        url = self.current_url()
+        return "valka.php" in url or "utok.php" in url
 
     async def take_screenshot(self) -> bytes:
         return await self.page.screenshot()
 
     async def close(self) -> None:
-        """Disconnect from the browser without closing it — the user's session stays open."""
+        """Disconnect without closing the user's browser session."""
         if self._browser:
             await self._browser.close()
         if self._playwright:
             await self._playwright.stop()
 
-    # --- Keep launch() for local testing / CI without a real browser ---
+    # --- Standalone mode for testing without a logged-in browser ---
     async def launch(self, headless: bool = False) -> None:
         self._playwright = await async_playwright().start()
         self._browser = await self._playwright.chromium.launch(
