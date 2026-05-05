@@ -1,5 +1,11 @@
 # --- URLs ---
 SECTOR_MAP_URL = "https://www.stargate-game.cz/mapa.php?page=0&id_sektor=47"
+GAME_HOST = "stargate-game.cz"
+
+# --- Browser attach (CDP) ---
+# Start Chrome with: chrome.exe --remote-debugging-port=9222
+# Then log into the game manually, then run the bot.
+CDP_URL = "http://localhost:9222"
 
 # --- Detection ---
 DOT_MIN_RADIUS = 8
