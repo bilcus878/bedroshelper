@@ -6,7 +6,7 @@ echo ============================================================
 echo.
 
 REM Already running with debug port? Done.
-netstat -an | find "9222" | find "LISTENING" >nul 2>&1
+powershell -NoProfile -Command "try { $t = New-Object Net.Sockets.TcpClient('127.0.0.1',9222); $t.Close(); exit 0 } catch { exit 1 }" >nul 2>&1
 if %errorlevel% == 0 (
     echo Port 9222 already open - Chrome debug is running.
     echo You can run start.bat now.
@@ -58,7 +58,7 @@ set /a tries=0
 :poll
 set /a tries+=1
 timeout /t 2 /nobreak >nul
-netstat -an | find "9222" | find "LISTENING" >nul 2>&1
+powershell -NoProfile -Command "try { $t = New-Object Net.Sockets.TcpClient('127.0.0.1',9222); $t.Close(); exit 0 } catch { exit 1 }" >nul 2>&1
 if %errorlevel% == 0 goto success
 if %tries% lss 7 goto poll
 

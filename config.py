@@ -5,7 +5,7 @@ GAME_HOST = "stargate-game.cz"
 # --- Browser attach (CDP) ---
 # Start Chrome with: chrome.exe --remote-debugging-port=9222
 # Then log into the game manually, then run the bot.
-CDP_URL = "http://localhost:9222"
+CDP_URL = "http://127.0.0.1:9222"  # explicit IPv4 — localhost resolves to ::1 on Win11
 
 # --- Detection ---
 DOT_MIN_RADIUS = 8
