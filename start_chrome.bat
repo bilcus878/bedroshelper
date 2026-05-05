@@ -50,7 +50,7 @@ pause
 exit /b 1
 
 :launch
-start "" %CHROME% --remote-debugging-port=9222
+start "" %CHROME% --remote-debugging-port=9222 --user-data-dir="%TEMP%\bedros_chrome"
 
 REM Poll for up to 15 seconds
 echo Waiting for port 9222 to open...
