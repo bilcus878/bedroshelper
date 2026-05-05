@@ -5,55 +5,80 @@ echo  Step 1 of 2: Launch Chrome with remote debugging
 echo ============================================================
 echo.
 
-REM Check if port is already open (previous debug session still running)
+REM Already running with debug port? Done.
 netstat -an | find "9222" | find "LISTENING" >nul 2>&1
 if %errorlevel% == 0 (
-    echo Port 9222 is already open - debug Chrome is running.
-    echo You can go ahead and run start.bat
+    echo Port 9222 already open - Chrome debug is running.
+    echo You can run start.bat now.
     pause
     exit /b 0
 )
 
-echo Killing any existing Chrome processes...
+REM Kill Chrome AND all child processes, then wait for them to fully die
+echo Killing Chrome processes...
+taskkill /F /IM chrome.exe /T >nul 2>&1
 taskkill /F /IM chrome.exe >nul 2>&1
-timeout /t 2 /nobreak >nul
+timeout /t 3 /nobreak >nul
+
+REM Confirm Chrome is dead
+tasklist | find /I "chrome.exe" >nul 2>&1
+if %errorlevel% == 0 (
+    echo Chrome still running, killing again...
+    taskkill /F /IM chrome.exe /T >nul 2>&1
+    timeout /t 3 /nobreak >nul
+)
 
 echo Starting Chrome with --remote-debugging-port=9222 ...
 
 if exist "%LOCALAPPDATA%\Google\Chrome\Application\chrome.exe" (
-    start "" "%LOCALAPPDATA%\Google\Chrome\Application\chrome.exe" --remote-debugging-port=9222
-    goto wait
+    set CHROME="%LOCALAPPDATA%\Google\Chrome\Application\chrome.exe"
+    goto launch
 )
 if exist "%PROGRAMFILES%\Google\Chrome\Application\chrome.exe" (
-    start "" "%PROGRAMFILES%\Google\Chrome\Application\chrome.exe" --remote-debugging-port=9222
-    goto wait
+    set CHROME="%PROGRAMFILES%\Google\Chrome\Application\chrome.exe"
+    goto launch
 )
 if exist "%PROGRAMFILES(X86)%\Google\Chrome\Application\chrome.exe" (
-    start "" "%PROGRAMFILES(X86)%\Google\Chrome\Application\chrome.exe" --remote-debugging-port=9222
-    goto wait
+    set CHROME="%PROGRAMFILES(X86)%\Google\Chrome\Application\chrome.exe"
+    goto launch
 )
 
-echo ERROR: Chrome not found. Edit start_chrome.bat with the correct path.
+echo ERROR: Chrome not found in default locations.
+echo Open Task Manager, right-click chrome.exe, Open file location
+echo Then edit start_chrome.bat and hardcode the path.
 pause
 exit /b 1
 
-:wait
-echo Waiting for Chrome to start...
-timeout /t 4 /nobreak >nul
+:launch
+start "" %CHROME% --remote-debugging-port=9222
 
+REM Poll for up to 15 seconds
+echo Waiting for port 9222 to open...
+set /a tries=0
+:poll
+set /a tries+=1
+timeout /t 2 /nobreak >nul
 netstat -an | find "9222" | find "LISTENING" >nul 2>&1
-if %errorlevel% == 0 (
-    echo.
-    echo SUCCESS - Port 9222 is open.
-    echo.
-    echo Now:
-    echo   1. Log into stargate-game.cz
-    echo   2. Navigate to the sector map
-    echo   3. Run start.bat
-) else (
-    echo.
-    echo FAILED - Port 9222 still not open.
-    echo Chrome path might be wrong. Check Task Manager to find chrome.exe location.
-)
+if %errorlevel% == 0 goto success
+if %tries% lss 7 goto poll
+
+echo.
+echo FAILED after 15 seconds. Port 9222 did not open.
+echo Possible causes:
+echo   - Another app is using port 9222
+echo   - Chrome is launching but ignoring the flag (profile locked?)
+echo Try: close Chrome completely, wait 10 seconds, run this again.
+echo.
+pause
+exit /b 1
+
+:success
+echo.
+echo SUCCESS - Port 9222 is open!
+echo.
+echo Now:
+echo   1. Log into stargate-game.cz in the Chrome window
+echo   2. Navigate to the sector map
+echo   3. Run start.bat
 echo.
 pause
