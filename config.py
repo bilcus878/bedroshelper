@@ -12,7 +12,7 @@ DOT_MIN_RADIUS = 8
 DOT_MAX_RADIUS = 25
 DOT_COLOR_SATURATION_MIN = 80
 POSITION_MATCH_TOLERANCE = 0.15
-POLL_INTERVAL_BASE = 30          # seconds between sector map scans
+POLL_INTERVAL_BASE = 1           # seconds between sector map scans — dots disappear in 5-10s!
 
 # --- Human behavior profiles ---
 # Switch between "cautious", "normal", "aggressive"
@@ -29,11 +29,11 @@ BEHAVIOR_PROFILES = {
         "occasional_pause_duration": (3.0, 12.0),
     },
     "normal": {
-        "reaction_delay": (2.0, 5.0),
+        "reaction_delay": (3.0, 4.5),       # 3-4s human reaction before acting on a dot
         "click_jitter_px": 4,
         "mouse_speed": (0.3, 0.9),
-        "poll_jitter": (0.7, 1.3),
-        "between_actions": (0.8, 2.5),
+        "poll_jitter": (0.8, 1.2),          # tight jitter — keep close to 1s base
+        "between_actions": (0.8, 2.0),
         "occasional_pause_chance": 0.08,
         "occasional_pause_duration": (2.0, 7.0),
     },
