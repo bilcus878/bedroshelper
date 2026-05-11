@@ -5,7 +5,7 @@ from core.event_bus import EventBus, Event, EventType
 from core.game_state import GameState
 from core.browser import BrowserSession
 from core.human import HumanBehavior
-from core.detector import detect_colonizable_sectors
+from core.detector import detect_op_dots
 from core.navigator import Navigator
 from core.scheduler import Scheduler
 from modules.colonize.module import ColonizeModule
@@ -20,9 +20,7 @@ async def main():
     navigator = Navigator(human)
     scheduler = Scheduler(event_bus, game_state, browser, navigator, human)
 
-    modules = [
-        ColonizeModule(event_bus, game_state, scheduler, human),
-    ]
+    modules = [ColonizeModule(event_bus, game_state, scheduler, human)]
     for module in modules:
         await module.setup()
 
@@ -30,43 +28,40 @@ async def main():
     if not await browser.attach():
         logger.error(
             "Bot cannot start.\n"
-            "  1. Run start_chrome.bat to open Chrome with debug port\n"
-            "  2. Log into stargate-game.cz\n"
-            "  3. Navigate to the sector map (mapa.php)\n"
-            "  4. Run start.bat again"
+            "  1. Run start_chrome.bat\n"
+            "  2. Log into the game and go to the sector map\n"
+            "  3. Run start.bat again"
         )
         sys.exit(1)
 
     asyncio.create_task(scheduler.run())
-    logger.info(f"Bot attached. Profile: {BEHAVIOR_PROFILE}. Watching: {browser.current_url()}")
+    logger.info(
+        f"Bot running. Profile: {BEHAVIOR_PROFILE}. "
+        f"Polling every ~{POLL_INTERVAL_BASE}s for gold OP dots."
+    )
 
     try:
         while True:
             try:
-                url = browser.current_url()
-
                 if browser.is_on_sector_map():
-                    sectors = await detect_colonizable_sectors(browser.page)
+                    dots = await detect_op_dots(browser.page)
 
-                    if sectors:
-                        logger.info(f"Found {len(sectors)} colonizable sector(s): "
-                                    f"{[s.sector_id for s in sectors]}")
+                    if dots:
+                        ids = [d.sector_id for d in dots]
+                        logger.info(f"Found {len(dots)} OP dot(s) in sectors: {ids}")
                         await event_bus.publish(Event(
                             type=EventType.DOT_FOUND,
-                            payload={"dots": sectors},
+                            payload={"dots": dots},
                             source="main_loop",
                         ))
                     else:
-                        logger.debug("No colonizable sectors found this poll")
-                        await event_bus.publish(
-                            Event(type=EventType.NO_DOTS_FOUND, source="main_loop")
-                        )
+                        logger.debug("No OP dots found this poll")
 
                 elif browser.is_on_war_page():
                     logger.debug("On war page — WarModule not yet active")
 
                 else:
-                    logger.debug(f"Waiting on: {url}")
+                    logger.debug(f"Waiting on: {browser.current_url()}")
 
                 await human.poll_wait(POLL_INTERVAL_BASE)
                 await human.maybe_take_break()
@@ -77,7 +72,6 @@ async def main():
 
     except KeyboardInterrupt:
         logger.info("Shutting down...")
-
     finally:
         for module in modules:
             await module.teardown()

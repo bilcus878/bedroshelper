@@ -7,7 +7,7 @@ from infra.logger import logger
 
 class ColonizeModule(BaseModule):
     async def setup(self) -> None:
-        self.event_bus.subscribe(EventType.DOT_FOUND, self._on_sectors_found)
+        self.event_bus.subscribe(EventType.DOT_FOUND, self._on_dots_found)
         self.event_bus.subscribe(EventType.COLONIZATION_SUCCESS, self._on_success)
         self.event_bus.subscribe(EventType.COLONIZATION_FAILED, self._on_failed)
         logger.info("ColonizeModule ready")
@@ -15,12 +15,12 @@ class ColonizeModule(BaseModule):
     async def teardown(self) -> None:
         pass
 
-    async def _on_sectors_found(self, event: Event) -> None:
-        sectors = event.payload.get("dots", [])
-        for sector in sectors:
-            task = ColonizeTask(sector=sector, priority=TaskPriority.NORMAL)
+    async def _on_dots_found(self, event: Event) -> None:
+        dots = event.payload.get("dots", [])
+        for dot in dots:
+            task = ColonizeTask(dot=dot, priority=TaskPriority.NORMAL)
             await self.scheduler.enqueue(task)
-            logger.info(f"ColonizeTask queued: sector {sector.sector_id} ({sector.title})")
+            logger.info(f"ColonizeTask queued: OP in sector {dot.sector_id} ({dot.sector_title})")
 
     async def _on_success(self, event: Event) -> None:
         logger.success(f"Colonization succeeded: {event.payload}")
